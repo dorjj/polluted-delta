@@ -78,7 +78,7 @@ client.on('interactionCreate', async interaction => {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 5, data: { flags: 64 } })
+          body: JSON.stringify({ type: 5, data: { flags: 0 } })
         }
     );
 
