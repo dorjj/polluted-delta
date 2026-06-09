@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 require('dotenv').config();
 
 const TOKEN = process.env.BOT_TOKEN;
@@ -72,36 +72,24 @@ client.on('interactionCreate', async interaction => {
   const cw = getWeekNumber(new Date());
   const weekDays = getWeekDays();
 
-  const pollBody = {
-    poll: {
-      question: { text: `Commander (CW ${cw})` },
-      answers: weekDays.map(day => ({ poll_media: { text: day } })),
-      allow_multiselect: true,
-      duration: 168
-    }
-  };
-
-  // Payload loggen um zu prüfen ob allow_multiselect korrekt gesendet wird
-  console.log('📤 Poll payload:', JSON.stringify(pollBody, null, 2));
-
   try {
-    await interaction.deferReply({ ephemeral: true });
-
-    const response = await rest.post(Routes.channelMessages(interaction.channelId), {
-      body: pollBody
+    const response = await interaction.reply({
+      poll: {
+        question: { text: `Commander (CW ${cw})` },
+        answers: weekDays.map(day => ({ poll_media: { text: day } })),
+        allow_multiselect: true,
+        duration: 168
+      },
+      withResponse: true
     });
 
-    // Discord-Antwort loggen – zeigt was tatsächlich erstellt wurde
-    console.log('📥 Discord response:', JSON.stringify(response?.poll, null, 2));
-
-    await interaction.editReply({ content: '✅ Poll erstellt!' });
+    console.log('📥 Poll created, allow_multiselect:', response?.resource?.message?.poll?.allow_multiselect);
   } catch (error) {
     console.error('❌ Fehler:', error);
-    await interaction.editReply({ content: '❌ Fehler beim Erstellen des Polls.' });
   }
 });
 
-client.once('ready', () => {
+client.once('clientReady', () => {
   console.log(`✅ Bot online als ${client.user.tag}`);
 });
 
