@@ -17,7 +17,7 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const commands = [
   new SlashCommandBuilder()
     .setName('pdelta')
-    .setDescription('Creates a Commander-Poll for the current week')
+    .setDescription('Erstellt einen Commander-Poll für die aktuelle Woche')
 ].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -36,7 +36,6 @@ async function registerCommands() {
 // Hilfsfunktionen
 // ---------------------------------------------------------------------------
 
-/** ISO-8601 Kalenderwoche berechnen */
 function getWeekNumber(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const dayNum = d.getUTCDay() || 7;
@@ -45,14 +44,12 @@ function getWeekNumber(date) {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-/** Alle 7 Tage der aktuellen Woche (Mo–So) als formatierte Strings zurückgeben */
 function getWeekDays() {
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const today = new Date();
 
-  // Montag dieser Woche ermitteln
   const monday = new Date(today);
-  const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ...
+  const dayOfWeek = today.getDay();
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   monday.setDate(today.getDate() + diff);
 
@@ -75,18 +72,32 @@ client.on('interactionCreate', async interaction => {
   const cw = getWeekNumber(new Date());
   const weekDays = getWeekDays();
 
+  const pollBody = {
+    poll: {
+      question: { text: `Commander (CW ${cw})` },
+      answers: weekDays.map(day => ({ poll_media: { text: day } })),
+      allow_multiselect: true,
+      duration: 168
+    }
+  };
+
+  // Payload loggen um zu prüfen ob allow_multiselect korrekt gesendet wird
+  console.log('📤 Poll payload:', JSON.stringify(pollBody, null, 2));
+
   try {
-    // Native Discord Poll (verfügbar ab discord.js v14.16+)
-    await interaction.reply({
-      poll: {
-        question: { text: `Commander (CW ${cw})` },
-        answers: weekDays.map(day => ({ text: day })),
-        allow_multiselect: true,
-        duration: 168  // 7 Tage (Maximum)
-      }
+    await interaction.deferReply({ ephemeral: true });
+
+    const response = await rest.post(Routes.channelMessages(interaction.channelId), {
+      body: pollBody
     });
+
+    // Discord-Antwort loggen – zeigt was tatsächlich erstellt wurde
+    console.log('📥 Discord response:', JSON.stringify(response?.poll, null, 2));
+
+    await interaction.editReply({ content: '✅ Poll erstellt!' });
   } catch (error) {
-    console.error('❌ Fehler beim Erstellen des Polls:', error);
+    console.error('❌ Fehler:', error);
+    await interaction.editReply({ content: '❌ Fehler beim Erstellen des Polls.' });
   }
 });
 
