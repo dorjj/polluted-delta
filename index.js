@@ -1,4 +1,3 @@
-const { Client, GatewayIntentBits, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 require('dotenv').config();
 
 const TOKEN = process.env.BOT_TOKEN;
@@ -73,17 +72,40 @@ client.on('interactionCreate', async interaction => {
   const weekDays = getWeekDays();
 
   try {
-    const response = await interaction.reply({
-      poll: {
-        question: { text: `Commander (CW ${cw})` },
-        answers: weekDays.map(day => ({ poll_media: { text: day } })),
-        allow_multiselect: true,
-        duration: 168
-      },
-      withResponse: true
-    });
+    await fetch(
+        `https://discord.com/api/v10/interactions/${interaction.id}/${interaction.token}/callback`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 5, data: { flags: 64 } })
+        }
+    );
 
-    console.log('📥 Poll created, allow_multiselect:', response?.resource?.message?.poll?.allow_multiselect);
+    const res = await fetch(
+        `https://discord.com/api/v10/webhooks/${CLIENT_ID}/${interaction.token}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bot ${TOKEN}`
+          },
+          body: JSON.stringify({
+            poll: {
+              question: { text: `Commander (CW ${cw})` },
+              answers: weekDays.map(day => ({ poll_media: { text: day } })),
+              allow_multiselect: true,
+              duration: 168
+            }
+          })
+        }
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('❌ Discord API Fehler:', JSON.stringify(data, null, 2));
+    } else {
+      console.log('✅ Poll erstellt, allow_multiselect:', data?.poll?.allow_multiselect);
+    }
   } catch (error) {
     console.error('❌ Fehler:', error);
   }
