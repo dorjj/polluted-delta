@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Environment variables – NIEMALS ins Repo pushen!
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+.idea
