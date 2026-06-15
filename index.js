@@ -17,7 +17,16 @@ const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBit
 const commands = [
   new SlashCommandBuilder()
     .setName('pdelta')
-    .setDescription('Erstellt einen Commander-Poll für die aktuelle Woche')
+    .setDescription('Create a Commander-Poll ')
+      .addStringOption(option =>
+          option.setName('week')
+              .setDescription('Which week?')
+              .setRequired(true)
+              .addChoices(
+                  { name: 'This Week', value: 'this' },
+                  { name: 'Next Week', value: 'next' }
+              )
+      )
 ].map(cmd => cmd.toJSON());
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
@@ -44,14 +53,14 @@ function getWeekNumber(date) {
   return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
 }
 
-function getWeekDays() {
+function getWeekDays(offset = 0) {
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
   const today = new Date();
 
   const monday = new Date(today);
   const dayOfWeek = today.getDay();
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-  monday.setDate(today.getDate() + diff);
+  monday.setDate(today.getDate() + diff + (offset * 7));
 
   return dayLabels.map((label, i) => {
     const date = new Date(monday);
@@ -69,8 +78,10 @@ client.on('interactionCreate', async interaction => {
   if (!interaction.isChatInputCommand()) return;
   if (interaction.commandName !== 'pdelta') return;
 
-  const cw = getWeekNumber(new Date());
-  const weekDays = getWeekDays();
+  const week = interaction.options.getString('week');
+  const offset = week === 'next' ? 1 : 0;
+  const cw = getWeekNumber(new Date(new Date().setDate(new Date().getDate() + (offset * 7))));
+  const weekDays = getWeekDays(offset);
 
   try {
     await fetch(
